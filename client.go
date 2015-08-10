@@ -24,7 +24,7 @@ import (
 )
 
 func (api *API) Signin(username, password string, contentUrl string, userIdToImpersonate string) error {
-	path := fmt.Sprintf("/api/%s/auth/signin", API_VERSION)
+	path := fmt.Sprintf("/api/%s/auth/signin", api.Version)
 	url := api.Server + path
 	credentials := Credentials{Name: username, Password: password}
 	if len(userIdToImpersonate) > 0 {
@@ -48,7 +48,7 @@ func (api *API) Signin(username, password string, contentUrl string, userIdToImp
 }
 
 func (api *API) Signout() error {
-	path := fmt.Sprintf("/api/%s/auth/signout", API_VERSION)
+	path := fmt.Sprintf("/api/%s/auth/signout", api.Version)
 	url := api.Server + path
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/xml"
@@ -59,20 +59,19 @@ func (api *API) Signout() error {
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Projects%3FTocPath%3DAPI%2520Reference%7C_____38
 func (api *API) ListProjects(siteId string) ([]Project, error) {
-	path := fmt.Sprintf("/api/%s/sites/%s/projects", API_VERSION, siteId)
+	path := fmt.Sprintf("/api/%s/sites/%s/projects", api.Version, siteId)
 	url := api.Server + path
 	headers := make(map[string]string)
 	headers["X-Tableau-Auth"] = api.AuthToken
 	retval := QueryProjectsResponse{}
 	err := api.makeRequest(url, "GET", []byte(""), &retval, headers, connectTimeOut, readWriteTimeout)
 	return retval.Projects.Projects, err
-
 }
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Create_Project%3FTocPath%3DAPI%2520Reference%7C_____14
 //POST /api/api-version/sites/site-id/projects
 func (api *API) CreateProject(siteId string, project Project) (retval *Project, err error) {
-	path := fmt.Sprintf("/api/%s/sites/%s/projects", API_VERSION, siteId)
+	path := fmt.Sprintf("/api/%s/sites/%s/projects", api.Version, siteId)
 	url := api.Server + path
 	createProjectRequest := CreateProjectRequest{Request: project}
 	xmlRep, err := createProjectRequest.XML()
@@ -92,9 +91,9 @@ func (api *API) CreateProject(siteId string, project Project) (retval *Project, 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Publish_Datasource%3FTocPath%3DAPI%2520Reference%7C_____31
 //POST /api/api-version/sites/site-id/datasources?overwrite=overwrite-flag
 func (api *API) PublishDataSource(siteId string, tdsMetadata Datasource, fullTds string, overwrite bool) (retval *Datasource, err error) {
-	path := fmt.Sprintf("/api/%s/sites/%s/datasources?datasourceType=%s&overwrite=%v", API_VERSION, siteId, "tds", overwrite)
+	path := fmt.Sprintf("/api/%s/sites/%s/datasources?datasourceType=%s&overwrite=%v", api.Version, siteId, "tds", overwrite)
 	url := api.Server + path
-	payload := fmt.Sprintf("--%s\r\n", BOUNDARY_STRING)
+	payload := fmt.Sprintf("--%s\r\n", api.Boundary)
 	payload += "Content-Disposition: name=\"request_payload\"\r\n"
 	payload += "Content-Type: text/xml\r\n"
 	payload += "\r\n"
@@ -105,14 +104,14 @@ func (api *API) PublishDataSource(siteId string, tdsMetadata Datasource, fullTds
 		return retval, err
 	}
 	payload += string(xmlRepresentation)
-	payload += fmt.Sprintf("\r\n--%s\r\n", BOUNDARY_STRING)
+	payload += fmt.Sprintf("\r\n--%s\r\n", api.Boundary)
 	payload += fmt.Sprintf("Content-Disposition: name=\"tableau_datasource\"; filename=\"%s.tds\"\r\n", tdsMetadata.Name)
 	payload += "Content-Type: application/octet-stream\r\n"
 	payload += "\r\n"
 	payload += fullTds
-	payload += fmt.Sprintf("\r\n--%s--\r\n", BOUNDARY_STRING)
+	payload += fmt.Sprintf("\r\n--%s--\r\n", api.Boundary)
 	headers := make(map[string]string)
-	headers["Content-Type"] = fmt.Sprintf("multipart/mixed; boundary=%s", BOUNDARY_STRING)
+	headers["Content-Type"] = fmt.Sprintf("multipart/mixed; boundary=%s", api.Boundary)
 	headers["Content-Length"] = fmt.Sprintf("%v", len([]byte(payload)))
 	headers["X-Tableau-Auth"] = api.AuthToken
 	err = api.makeRequest(url, "POST", []byte(payload), retval, headers, connectTimeOut, readWriteTimeout)
