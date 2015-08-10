@@ -167,18 +167,18 @@ func (api *API) DeleteSite(siteId string) error {
 	return api.delete(url)
 }
 
-//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Site%3FTocPath%3DAPI%2520Reference%7C_____19
 func (api *API) DeleteSiteByName(name string) error {
-	return api.deleteByKey("name", name)
+	return api.deleteSiteByKey("name", name)
 }
 
-//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Site%3FTocPath%3DAPI%2520Reference%7C_____19
 func (api *API) DeleteSiteByContentUrl(contentUrl string) error {
-	return api.deleteByKey("contentUrl", contentUrl)
+	return api.deleteSiteByKey("contentUrl", contentUrl)
 }
 
-//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
-func (api *API) deleteByKey(key string, value string) error {
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Site%3FTocPath%3DAPI%2520Reference%7C_____19
+func (api *API) deleteSiteByKey(key string, value string) error {
 	url := fmt.Sprintf("%s/api/%s/sites/%s?key=%s", api.Server, api.Version, value, key)
 	return api.delete(url)
 }
