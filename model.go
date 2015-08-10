@@ -121,9 +121,33 @@ type User struct {
 	ID string `json:"id,omitempty" xml:"id,attr,omitempty"`
 }
 
-type Site struct {
-	ContentUrl string `json:"contentUrl" xml:"contentUrl,attr"`
+type QuerySitesResponse struct {
+	Sites Sites `json:"sites,omitempty" xml:"sites,omitempty"`
 }
+
+func (req QuerySitesResponse) XML() ([]byte, error) {
+	tmp := struct {
+		QuerySitesResponse
+		XMLName struct{} `xml:"tsRequest"`
+	}{QuerySitesResponse: req}
+	return xml.MarshalIndent(tmp, "", "   ")
+}
+
+type Sites struct {
+	Sites []Site `json:"sites" xml:"sites,attr"`
+}
+
+type Site struct {
+	ID           string `json:"id,omitempty" xml:"id,attr,omitempty"`
+	Name         string `json:"name,omitempty" xml:"name,attr,omitempty"`
+	ContentUrl   string `json:"contentUrl,omitempty" xml:"contentUrl,attr,omitempty"`
+	AdminMode    string `json:"adminMode,omitempty" xml:"adminMode,attr,omitempty"`
+	UserQuota    string `json:"userQuota,omitempty" xml:"userQuota,attr,omitempty"`
+	StorageQuota string `json:"storageQuota,omitempty" xml:"storageQuota,attr,omitempty"`
+	State        string `json:"state,omitempty" xml:"state,attr,omitempty"`
+	StatusReason string `json:"statusReason,omitempty" xml:"statusReason,attr,omitempty"`
+}
+
 type ConnectionCredentials struct {
 	Name     string `json:"name,omitempty" xml:"name,attr,omitempty"`
 	Password string `json:"password,omitempty" xml:"password,attr,omitempty"`
