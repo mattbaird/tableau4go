@@ -27,7 +27,7 @@ import (
 const content_type_header = "Content-Type"
 const content_length_header = "Content-Length"
 const auth_header = "X-Tableau-Auth"
-const content_type = "application/xml"
+const application_xml_content_type = "application/xml"
 const POST = "POST"
 const GET = "GET"
 const DELETE = "DELETE"
@@ -49,7 +49,7 @@ func (api *API) Signin(username, password string, contentUrl string, userIdToImp
 	}
 	payload := string(signInXML)
 	headers := make(map[string]string)
-	headers["Content-Type"] = content_type
+	headers[content_type_header] = application_xml_content_type
 	retval := AuthResponse{}
 	err = api.makeRequest(url, POST, []byte(payload), &retval, headers, connectTimeOut, readWriteTimeout)
 	if err == nil {
@@ -62,8 +62,7 @@ func (api *API) Signin(username, password string, contentUrl string, userIdToImp
 func (api *API) Signout() error {
 	url := fmt.Sprintf("%s/api/%s/auth/signout", api.Server, api.Version)
 	headers := make(map[string]string)
-	headers[content_type_header] = content_type
-	headers[auth_header] = api.AuthToken
+	headers[content_type_header] = application_xml_content_type
 	err := api.makeRequest(url, POST, nil, nil, headers, connectTimeOut, readWriteTimeout)
 	return err
 }
@@ -72,7 +71,6 @@ func (api *API) Signout() error {
 func (api *API) QuerySites() ([]Site, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/", api.Server, api.Version)
 	headers := make(map[string]string)
-	headers[auth_header] = api.AuthToken
 	retval := QuerySitesResponse{}
 	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
 	return retval.Sites.Sites, err
@@ -85,7 +83,6 @@ func (api *API) QuerySite(siteID string, includeStorage bool) (Site, error) {
 		url += fmt.Sprintf("?includeStorage=%v", includeStorage)
 	}
 	headers := make(map[string]string)
-	headers[auth_header] = api.AuthToken
 	retval := QuerySiteResponse{}
 	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
 	return retval.Site, err
@@ -95,7 +92,6 @@ func (api *API) QuerySite(siteID string, includeStorage bool) (Site, error) {
 func (api *API) QueryProjects(siteId string) ([]Project, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/%s/projects", api.Server, api.Version, siteId)
 	headers := make(map[string]string)
-	headers[auth_header] = api.AuthToken
 	retval := QueryProjectsResponse{}
 	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
 	return retval.Projects.Projects, err
@@ -111,8 +107,7 @@ func (api *API) CreateProject(siteId string, project Project) (*Project, error) 
 		return nil, err
 	}
 	headers := make(map[string]string)
-	headers[content_type_header] = content_type
-	headers[auth_header] = api.AuthToken
+	headers[content_type_header] = application_xml_content_type
 	createProjectResponse := CreateProjectResponse{}
 	err = api.makeRequest(url, POST, xmlRep, &createProjectResponse, headers, connectTimeOut, readWriteTimeout)
 	return &createProjectResponse.Project, err
@@ -144,7 +139,6 @@ func (api *API) publishDatasource(siteId string, tdsMetadata Datasource, datasou
 	payload += fmt.Sprintf("\r\n--%s--\r\n", api.Boundary)
 	headers := make(map[string]string)
 	headers[content_type_header] = fmt.Sprintf("multipart/mixed; boundary=%s", api.Boundary)
-	headers[auth_header] = api.AuthToken
 	err = api.makeRequest(url, POST, []byte(payload), retval, headers, connectTimeOut, readWriteTimeout)
 	return retval, err
 }
@@ -185,7 +179,6 @@ func (api *API) deleteSiteByKey(key string, value string) error {
 
 func (api *API) delete(url string) error {
 	headers := make(map[string]string)
-	headers[auth_header] = api.AuthToken
 	return api.makeRequest(url, DELETE, nil, nil, headers, connectTimeOut, readWriteTimeout)
 }
 
@@ -211,6 +204,9 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 		for header, headerValue := range headers {
 			req.Header.Add(header, headerValue)
 		}
+	}
+	if len(api.AuthToken) > 0 {
+		req.Header.Add(auth_header, api.AuthToken)
 	}
 	var httpErr error
 	resp, httpErr := client.Do(req)
