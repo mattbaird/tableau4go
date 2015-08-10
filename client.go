@@ -82,6 +82,30 @@ func (api *API) QuerySite(siteID string, includeStorage bool) (Site, error) {
 	if includeStorage {
 		url += fmt.Sprintf("?includeStorage=%v", includeStorage)
 	}
+	return api.querySite(url)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
+func (api *API) QuerySiteByName(name string, includeStorage bool) (Site, error) {
+	return api.querySiteByKey("name", name, includeStorage)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
+func (api *API) QuerySiteByContentUrl(contentUrl string, includeStorage bool) (Site, error) {
+	return api.querySiteByKey("contentUrl", contentUrl, includeStorage)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
+func (api *API) querySiteByKey(key, value string, includeStorage bool) (Site, error) {
+	url := fmt.Sprintf("%s/api/%s/sites/%s?key=%s", api.Server, api.Version, value, key)
+	if includeStorage {
+		url += fmt.Sprintf("&includeStorage=%v", includeStorage)
+	}
+	return api.querySite(url)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
+func (api *API) querySite(url string) (Site, error) {
 	headers := make(map[string]string)
 	retval := QuerySiteResponse{}
 	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
@@ -95,6 +119,14 @@ func (api *API) QueryProjects(siteId string) ([]Project, error) {
 	retval := QueryProjectsResponse{}
 	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
 	return retval.Projects.Projects, err
+}
+
+func (api *API) GetSiteID(siteName string) (string, error) {
+	site, err := api.QuerySiteByName(siteName, false)
+	if err != nil {
+		return "", err
+	}
+	return site.ID, err
 }
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Create_Project%3FTocPath%3DAPI%2520Reference%7C_____14
