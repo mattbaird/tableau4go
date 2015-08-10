@@ -109,14 +109,18 @@ func (api *API) CreateProject(siteId string, project Project) (retval *Project, 
 }
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Publish_Datasource%3FTocPath%3DAPI%2520Reference%7C_____31
-func (api *API) PublishDataSource(siteId string, tdsMetadata Datasource, fullTds string, overwrite bool) (retval *Datasource, err error) {
-	path := fmt.Sprintf("/api/%s/sites/%s/datasources?datasourceType=%s&overwrite=%v", api.Version, siteId, "tds", overwrite)
+func (api *API) PublishTDS(siteId string, tdsMetadata Datasource, fullTds string, overwrite bool) (retval *Datasource, err error) {
+	return api.publishDatasource(siteId, tdsMetadata, fullTds, "tds", overwrite)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Publish_Datasource%3FTocPath%3DAPI%2520Reference%7C_____31
+func (api *API) publishDatasource(siteId string, tdsMetadata Datasource, datasource string, datasourceType string, overwrite bool) (retval *Datasource, err error) {
+	path := fmt.Sprintf("/api/%s/sites/%s/datasources?datasourceType=%s&overwrite=%v", api.Version, siteId, datasourceType, overwrite)
 	url := api.Server + path
 	payload := fmt.Sprintf("--%s\r\n", api.Boundary)
 	payload += "Content-Disposition: name=\"request_payload\"\r\n"
 	payload += "Content-Type: text/xml\r\n"
 	payload += "\r\n"
-	tdsMetadata.Project.ID = "6bc04090-0b2e-448a-8c00-b3bbe6352b11"
 	tdsRequest := DatasourceCreateRequest{Request: tdsMetadata}
 	xmlRepresentation, err := tdsRequest.XML()
 	if err != nil {
@@ -127,7 +131,7 @@ func (api *API) PublishDataSource(siteId string, tdsMetadata Datasource, fullTds
 	payload += fmt.Sprintf("Content-Disposition: name=\"tableau_datasource\"; filename=\"%s.tds\"\r\n", tdsMetadata.Name)
 	payload += "Content-Type: application/octet-stream\r\n"
 	payload += "\r\n"
-	payload += fullTds
+	payload += datasource
 	payload += fmt.Sprintf("\r\n--%s--\r\n", api.Boundary)
 	headers := make(map[string]string)
 	headers[content_type_header] = fmt.Sprintf("multipart/mixed; boundary=%s", api.Boundary)
