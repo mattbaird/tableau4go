@@ -14,6 +14,7 @@ package tableau4go
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"github.com/AtScaleInc/apps-shared/httputil"
 	"io/ioutil"
@@ -30,10 +31,11 @@ const content_type = "application/xml"
 const POST = "POST"
 const GET = "GET"
 
+var ErrDoesNotExist = errors.New("Does Not Exist")
+
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Sign_In%3FTocPath%3DAPI%2520Reference%7C_____51
 func (api *API) Signin(username, password string, contentUrl string, userIdToImpersonate string) error {
-	path := fmt.Sprintf("/api/%s/auth/signin", api.Version)
-	url := api.Server + path
+	url := fmt.Sprintf("%s/api/%s/auth/signin", api.Server, api.Version)
 	credentials := Credentials{Name: username, Password: password}
 	if len(userIdToImpersonate) > 0 {
 		credentials.Impersonate = &User{ID: userIdToImpersonate}
@@ -57,8 +59,7 @@ func (api *API) Signin(username, password string, contentUrl string, userIdToImp
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Sign_Out%3FTocPath%3DAPI%2520Reference%7C_____52
 func (api *API) Signout() error {
-	path := fmt.Sprintf("/api/%s/auth/signout", api.Version)
-	url := api.Server + path
+	url := fmt.Sprintf("%s/api/%s/auth/signout", api.Server, api.Version)
 	headers := make(map[string]string)
 	headers[content_type_header] = content_type
 	headers[auth_header] = api.AuthToken
@@ -68,8 +69,7 @@ func (api *API) Signout() error {
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
 func (api *API) QuerySites() ([]Site, error) {
-	path := fmt.Sprintf("/api/%s/sites/", api.Version)
-	url := api.Server + path
+	url := fmt.Sprintf("%s/api/%s/sites/", api.Server, api.Version)
 	headers := make(map[string]string)
 	headers[auth_header] = api.AuthToken
 	retval := QuerySitesResponse{}
@@ -79,11 +79,10 @@ func (api *API) QuerySites() ([]Site, error) {
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
 func (api *API) QuerySite(siteID string, includeStorage bool) (Site, error) {
-	path := fmt.Sprintf("/api/%s/sites/%s", api.Version, siteID)
+	url := fmt.Sprintf("%s/api/%s/sites/%s", api.Server, api.Version, siteID)
 	if includeStorage {
-		path += fmt.Sprintf("?includeStorage=%v", includeStorage)
+		url += fmt.Sprintf("?includeStorage=%v", includeStorage)
 	}
-	url := api.Server + path
 	headers := make(map[string]string)
 	headers[auth_header] = api.AuthToken
 	retval := QuerySiteResponse{}
@@ -93,8 +92,7 @@ func (api *API) QuerySite(siteID string, includeStorage bool) (Site, error) {
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Projects%3FTocPath%3DAPI%2520Reference%7C_____38
 func (api *API) QueryProjects(siteId string) ([]Project, error) {
-	path := fmt.Sprintf("/api/%s/sites/%s/projects", api.Version, siteId)
-	url := api.Server + path
+	url := fmt.Sprintf("%s/api/%s/sites/%s/projects", api.Server, api.Version, siteId)
 	headers := make(map[string]string)
 	headers[auth_header] = api.AuthToken
 	retval := QueryProjectsResponse{}
@@ -104,22 +102,19 @@ func (api *API) QueryProjects(siteId string) ([]Project, error) {
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Create_Project%3FTocPath%3DAPI%2520Reference%7C_____14
 //POST /api/api-version/sites/site-id/projects
-func (api *API) CreateProject(siteId string, project Project) (retval *Project, err error) {
-	path := fmt.Sprintf("/api/%s/sites/%s/projects", api.Version, siteId)
-	url := api.Server + path
+func (api *API) CreateProject(siteId string, project Project) (*Project, error) {
+	url := fmt.Sprintf("%s/api/%s/sites/%s/projects", api.Server, api.Version, siteId)
 	createProjectRequest := CreateProjectRequest{Request: project}
 	xmlRep, err := createProjectRequest.XML()
 	if err != nil {
-		return &project, err
+		return nil, err
 	}
 	headers := make(map[string]string)
 	headers[content_type_header] = content_type
 	headers[auth_header] = api.AuthToken
-	err = api.makeRequest(url, POST, xmlRep, retval, headers, connectTimeOut, readWriteTimeout)
-	if err != nil {
-		fmt.Printf("error creating project:%v\n", err)
-	}
-	return retval, err
+	createProjectResponse := CreateProjectResponse{}
+	err = api.makeRequest(url, POST, xmlRep, &createProjectResponse, headers, connectTimeOut, readWriteTimeout)
+	return &createProjectResponse.Project, err
 }
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Publish_Datasource%3FTocPath%3DAPI%2520Reference%7C_____31
@@ -129,8 +124,7 @@ func (api *API) PublishTDS(siteId string, tdsMetadata Datasource, fullTds string
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Publish_Datasource%3FTocPath%3DAPI%2520Reference%7C_____31
 func (api *API) publishDatasource(siteId string, tdsMetadata Datasource, datasource string, datasourceType string, overwrite bool) (retval *Datasource, err error) {
-	path := fmt.Sprintf("/api/%s/sites/%s/datasources?datasourceType=%s&overwrite=%v", api.Version, siteId, datasourceType, overwrite)
-	url := api.Server + path
+	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources?datasourceType=%s&overwrite=%v", api.Server, api.Version, siteId, datasourceType, overwrite)
 	payload := fmt.Sprintf("--%s\r\n", api.Boundary)
 	payload += "Content-Disposition: name=\"request_payload\"\r\n"
 	payload += "Content-Type: text/xml\r\n"
@@ -188,7 +182,7 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 		return readBodyError
 	}
 	if resp.StatusCode == 404 {
-		return fmt.Errorf("Not Found")
+		return ErrDoesNotExist
 	}
 	if resp.StatusCode >= 300 {
 		tErrorResponse := ErrorResponse{}

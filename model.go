@@ -14,6 +14,7 @@ package tableau4go
 import (
 	"encoding/xml"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -35,11 +36,15 @@ type API struct {
 }
 
 func DefaultApi() API {
-	return API{Server: DEFAULT_SERVER, Version: API_VERSION, Boundary: BOUNDARY_STRING}
+	return NewAPI(DEFAULT_SERVER, API_VERSION, BOUNDARY_STRING)
 }
 
 func NewAPI(server string, version string, boundary string) API {
-	return API{Server: server, Version: version, Boundary: boundary}
+	fixedUpServer := server
+	if strings.HasSuffix(server, "/") {
+		fixedUpServer = server[0 : len(server)-1]
+	}
+	return API{Server: fixedUpServer, Version: version, Boundary: boundary}
 }
 
 type Project struct {
@@ -53,6 +58,10 @@ type Projects struct {
 
 func NewProject(id string, name string, description string) Project {
 	return Project{ID: id, Name: name, Description: description}
+}
+
+type CreateProjectResponse struct {
+	Project Project `json:"project,omitempty" xml:"project,omitempty"`
 }
 
 type CreateProjectRequest struct {
