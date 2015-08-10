@@ -30,6 +30,7 @@ const auth_header = "X-Tableau-Auth"
 const content_type = "application/xml"
 const POST = "POST"
 const GET = "GET"
+const DELETE = "DELETE"
 
 var ErrDoesNotExist = errors.New("Does Not Exist")
 
@@ -146,6 +147,46 @@ func (api *API) publishDatasource(siteId string, tdsMetadata Datasource, datasou
 	headers[auth_header] = api.AuthToken
 	err = api.makeRequest(url, POST, []byte(payload), retval, headers, connectTimeOut, readWriteTimeout)
 	return retval, err
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Datasource%3FTocPath%3DAPI%2520Reference%7C_____15
+func (api *API) DeleteDatasource(siteId string, datasourceId string) error {
+	url := fmt.Sprintf("%s/api/%s/sites/%s/projects/%s", api.Server, api.Version, siteId, datasourceId)
+	return api.delete(url)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
+func (api *API) DeleteProject(siteId string, projectId string) error {
+	url := fmt.Sprintf("%s/api/%s/sites/%s/projects/%s", api.Server, api.Version, siteId, projectId)
+	return api.delete(url)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
+func (api *API) DeleteSite(siteId string) error {
+	url := fmt.Sprintf("%s/api/%s/sites/%s", api.Server, api.Version, siteId)
+	return api.delete(url)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
+func (api *API) DeleteSiteByName(name string) error {
+	return api.deleteByKey("name", name)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
+func (api *API) DeleteSiteByContentUrl(contentUrl string) error {
+	return api.deleteByKey("contentUrl", contentUrl)
+}
+
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Project%3FTocPath%3DAPI%2520Reference%7C_____17
+func (api *API) deleteByKey(key string, value string) error {
+	url := fmt.Sprintf("%s/api/%s/sites/%s?key=%s", api.Server, api.Version, value, key)
+	return api.delete(url)
+}
+
+func (api *API) delete(url string) error {
+	headers := make(map[string]string)
+	headers[auth_header] = api.AuthToken
+	return api.makeRequest(url, DELETE, nil, nil, headers, connectTimeOut, readWriteTimeout)
 }
 
 func (api *API) makeRequest(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string,
