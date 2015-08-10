@@ -137,15 +137,33 @@ type Sites struct {
 	Sites []Site `json:"sites" xml:"sites,attr"`
 }
 
+type QuerySiteResponse struct {
+	Site Site `json:"site,omitempty" xml:"site,omitempty"`
+}
+
+func (req QuerySiteResponse) XML() ([]byte, error) {
+	tmp := struct {
+		QuerySiteResponse
+		XMLName struct{} `xml:"tsRequest"`
+	}{QuerySiteResponse: req}
+	return xml.MarshalIndent(tmp, "", "   ")
+}
+
 type Site struct {
-	ID           string `json:"id,omitempty" xml:"id,attr,omitempty"`
-	Name         string `json:"name,omitempty" xml:"name,attr,omitempty"`
-	ContentUrl   string `json:"contentUrl,omitempty" xml:"contentUrl,attr,omitempty"`
-	AdminMode    string `json:"adminMode,omitempty" xml:"adminMode,attr,omitempty"`
-	UserQuota    string `json:"userQuota,omitempty" xml:"userQuota,attr,omitempty"`
-	StorageQuota string `json:"storageQuota,omitempty" xml:"storageQuota,attr,omitempty"`
-	State        string `json:"state,omitempty" xml:"state,attr,omitempty"`
-	StatusReason string `json:"statusReason,omitempty" xml:"statusReason,attr,omitempty"`
+	ID           string     `json:"id,omitempty" xml:"id,attr,omitempty"`
+	Name         string     `json:"name,omitempty" xml:"name,attr,omitempty"`
+	ContentUrl   string     `json:"contentUrl,omitempty" xml:"contentUrl,attr,omitempty"`
+	AdminMode    string     `json:"adminMode,omitempty" xml:"adminMode,attr,omitempty"`
+	UserQuota    string     `json:"userQuota,omitempty" xml:"userQuota,attr,omitempty"`
+	StorageQuota int        `json:"storageQuota,omitempty" xml:"storageQuota,attr,omitempty"`
+	State        string     `json:"state,omitempty" xml:"state,attr,omitempty"`
+	StatusReason string     `json:"statusReason,omitempty" xml:"statusReason,attr,omitempty"`
+	Usage        *SiteUsage `json:"usage,omitempty" xml:"usage,omitempty"`
+}
+
+type SiteUsage struct {
+	NumberOfUsers int `json:"number-of-users" xml:"number-of-users,attr"`
+	Storage       int `json:"storage" xml:"storage,attr"`
 }
 
 type ConnectionCredentials struct {

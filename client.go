@@ -77,6 +77,20 @@ func (api *API) QuerySites() ([]Site, error) {
 	return retval.Sites.Sites, err
 }
 
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
+func (api *API) QuerySite(siteID string, includeStorage bool) (Site, error) {
+	path := fmt.Sprintf("/api/%s/sites/%s", api.Version, siteID)
+	if includeStorage {
+		path += fmt.Sprintf("?includeStorage=%v", includeStorage)
+	}
+	url := api.Server + path
+	headers := make(map[string]string)
+	headers[auth_header] = api.AuthToken
+	retval := QuerySiteResponse{}
+	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	return retval.Site, err
+}
+
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Projects%3FTocPath%3DAPI%2520Reference%7C_____38
 func (api *API) QueryProjects(siteId string) ([]Project, error) {
 	path := fmt.Sprintf("/api/%s/sites/%s/projects", api.Version, siteId)
