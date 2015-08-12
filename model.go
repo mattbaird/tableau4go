@@ -52,6 +52,7 @@ type Project struct {
 	Name        string `json:"name,omitempty" xml:"name,attr,omitempty"`
 	Description string `json:"description,omitempty" xml:"description,attr,omitempty"`
 }
+
 type Projects struct {
 	Projects []Project `json:"project,omitempty" xml:"project,omitempty"`
 }
@@ -93,9 +94,23 @@ func (req DatasourceCreateRequest) XML() ([]byte, error) {
 }
 
 type Datasource struct {
+	ID                    string                 `json:"id,omitempty" xml:"id,attr,omitempty"`
 	Name                  string                 `json:"name,omitempty" xml:"name,attr,omitempty"`
+	Type                  string                 `json:"type,omitempty" xml:"type,attr,omitempty"`
 	ConnectionCredentials *ConnectionCredentials `json:"connectionCredentials,omitempty" xml:"connectionCredentials,omitempty"`
 	Project               *Project               `json:"project,omitempty" xml:"project,omitempty"`
+}
+
+type Datasources struct {
+	Datasources []Datasource `json:"datasource,omitempty" xml:"datasource,omitempty"`
+}
+
+type QueryDatasourcesResponse struct {
+	Datasources Datasources `json:"datasources,omitempty" xml:"datasources,omitempty"`
+}
+
+func (ds *Datasource) XML() ([]byte, error) {
+	return xml.MarshalIndent(ds, "", "   ")
 }
 
 type SigninRequest struct {
@@ -179,10 +194,6 @@ type ConnectionCredentials struct {
 	Name     string `json:"name,omitempty" xml:"name,attr,omitempty"`
 	Password string `json:"password,omitempty" xml:"password,attr,omitempty"`
 	Embed    bool   `json:"embed" xml:"embed,attr"`
-}
-
-func (ds *Datasource) XML() ([]byte, error) {
-	return xml.MarshalIndent(ds, "", "   ")
 }
 
 type ErrorResponse struct {

@@ -121,6 +121,15 @@ func (api *API) QueryProjects(siteId string) ([]Project, error) {
 	return retval.Projects.Projects, err
 }
 
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Datasources%3FTocPath%3DAPI%2520Reference%7C_____33
+func (api *API) QueryDatasources(siteId string) ([]Datasource, error) {
+	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources", api.Server, api.Version, siteId)
+	headers := make(map[string]string)
+	retval := QueryDatasourcesResponse{}
+	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	return retval.Datasources.Datasources, err
+}
+
 func (api *API) GetSiteID(siteName string) (string, error) {
 	site, err := api.QuerySiteByName(siteName, false)
 	if err != nil {
@@ -177,7 +186,7 @@ func (api *API) publishDatasource(siteId string, tdsMetadata Datasource, datasou
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Delete_Datasource%3FTocPath%3DAPI%2520Reference%7C_____15
 func (api *API) DeleteDatasource(siteId string, datasourceId string) error {
-	url := fmt.Sprintf("%s/api/%s/sites/%s/projects/%s", api.Server, api.Version, siteId, datasourceId)
+	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources/%s", api.Server, api.Version, siteId, datasourceId)
 	return api.delete(url)
 }
 
@@ -216,6 +225,12 @@ func (api *API) delete(url string) error {
 
 func (api *API) makeRequest(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string,
 	cTimeout time.Duration, rwTimeout time.Duration) error {
+	if false {
+		fmt.Printf("%s:%v\n", method, requestUrl)
+		if payload != nil {
+			fmt.Printf("%v\n", string(payload))
+		}
+	}
 	client := httputil.NewTimeoutClient(cTimeout, rwTimeout)
 	var req *http.Request
 	if len(payload) > 0 {
