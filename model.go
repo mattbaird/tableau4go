@@ -196,6 +196,10 @@ type ConnectionCredentials struct {
 	Embed    bool   `json:"embed" xml:"embed,attr"`
 }
 
+func NewConnectionCredentials(name, password string, embed bool) ConnectionCredentials {
+	return ConnectionCredentials{Name: name, Password: password, Embed: embed}
+}
+
 type ErrorResponse struct {
 	Error Terror `json:"error,omitempty" xml:"error,omitempty"`
 }
