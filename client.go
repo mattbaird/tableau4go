@@ -41,7 +41,13 @@ func (api *API) Signin(username, password string, contentUrl string, userIdToImp
 	if len(userIdToImpersonate) > 0 {
 		credentials.Impersonate = &User{ID: userIdToImpersonate}
 	}
-	credentials.Site = &Site{ContentUrl: contentUrl}
+	siteName := contentUrl
+	// this seems to have changed. If you are looking for the default site, you must pass
+	// blank
+	if contentUrl == "Default" {
+		siteName = ""
+	}
+	credentials.Site = &Site{ContentUrl: siteName}
 	request := SigninRequest{Request: credentials}
 	signInXML, err := request.XML()
 	if err != nil {
