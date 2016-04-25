@@ -44,8 +44,10 @@ func (api *API) Signin(username, password string, contentUrl string, userIdToImp
 	siteName := contentUrl
 	// this seems to have changed. If you are looking for the default site, you must pass
 	// blank
-	if contentUrl == "Default" {
-		siteName = ""
+	if api.OmitDefaultSiteName {
+		if contentUrl == api.DefaultSiteName {
+			siteName = ""
+		}
 	}
 	credentials.Site = &Site{ContentUrl: siteName}
 	request := SigninRequest{Request: credentials}
