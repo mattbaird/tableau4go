@@ -129,6 +129,32 @@ func (api *API) QueryProjects(siteId string) ([]Project, error) {
 	return retval.Projects.Projects, err
 }
 
+func (api *API) GetProjectByName(siteId, name string) (Project, error) {
+	projects, err := api.QueryProjects(siteId)
+	if err != nil {
+		return Project{}, err
+	}
+	for _, project := range projects {
+		if project.Name == name {
+			return project, nil
+		}
+	}
+	return Project{}, fmt.Errorf("Project Named '%s' Not Found", name)
+}
+
+func (api *API) GetProjectByID(siteId, ID string) (Project, error) {
+	projects, err := api.QueryProjects(siteId)
+	if err != nil {
+		return Project{}, err
+	}
+	for _, project := range projects {
+		if project.ID == ID {
+			return project, nil
+		}
+	}
+	return Project{}, fmt.Errorf("Project with ID '%s' Not Found", ID)
+}
+
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Datasources%3FTocPath%3DAPI%2520Reference%7C_____33
 func (api *API) QueryDatasources(siteId string) ([]Datasource, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources", api.Server, api.Version, siteId)
@@ -233,7 +259,8 @@ func (api *API) delete(url string) error {
 
 func (api *API) makeRequest(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string,
 	cTimeout time.Duration, rwTimeout time.Duration) error {
-	if false {
+	var debug = false
+	if debug {
 		fmt.Printf("%s:%v\n", method, requestUrl)
 		if payload != nil {
 			fmt.Printf("%v\n", string(payload))
@@ -261,6 +288,9 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 		}
 	}
 	if len(api.AuthToken) > 0 {
+		if debug {
+			fmt.Printf("%s:%s\n", auth_header, api.AuthToken)
+		}
 		req.Header.Add(auth_header, api.AuthToken)
 	}
 	var httpErr error
@@ -270,6 +300,9 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 	}
 	defer resp.Body.Close()
 	body, readBodyError := ioutil.ReadAll(resp.Body)
+	if debug {
+		fmt.Printf("t4g Response:%v\n", string(body))
+	}
 	if readBodyError != nil {
 		return readBodyError
 	}
