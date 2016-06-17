@@ -16,7 +16,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/AtScaleInc/apps-shared/httputil"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -266,7 +265,7 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 			fmt.Printf("%v\n", string(payload))
 		}
 	}
-	client := httputil.DefaultTimeoutClient()
+	client := DefaultTimeoutClient()
 	var req *http.Request
 	if len(payload) > 0 {
 		var httpErr error

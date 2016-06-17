@@ -15,12 +15,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"strings"
-	"time"
-)
-
-var (
-	connectTimeOut   = time.Duration(30 * time.Second)
-	readWriteTimeout = time.Duration(30 * time.Second)
 )
 
 const API_VERSION = "2.0"
