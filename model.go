@@ -96,6 +96,7 @@ type Datasource struct {
 	Type                  string                 `json:"type,omitempty" xml:"type,attr,omitempty"`
 	ConnectionCredentials *ConnectionCredentials `json:"connectionCredentials,omitempty" xml:"connectionCredentials,omitempty"`
 	Project               *Project               `json:"project,omitempty" xml:"project,omitempty"`
+	Owner                 *User                  `json:"owner,omitempty" xml:"owner,omitempty"`
 }
 
 type Datasources struct {
@@ -140,6 +141,9 @@ type Credentials struct {
 
 type User struct {
 	ID string `json:"id,omitempty" xml:"id,attr,omitempty"`
+	Name string `json:"name,omitempty" xml:"name,attr,omitempty"`
+	SiteRole string `json:"siteRole,omitempty" xml:"siteRole,attr,omitempty"`
+	FullName string `json:"fullName,omitempty" xml:"fullName,attr,omitempty"`
 }
 
 type QuerySitesResponse struct {
@@ -167,6 +171,18 @@ func (req QuerySiteResponse) XML() ([]byte, error) {
 		QuerySiteResponse
 		XMLName struct{} `xml:"tsRequest"`
 	}{QuerySiteResponse: req}
+	return xml.MarshalIndent(tmp, "", "   ")
+}
+
+type QueryUserOnSiteResponse struct {
+	User User `json:"user,omitempty" xml:"user,omitempty"`
+}
+
+func (req QueryUserOnSiteResponse) XML() ([]byte, error) {
+	tmp := struct {
+		QueryUserOnSiteResponse
+		XMLName struct{} `xml:"tsRequest"`
+	}{QueryUserOnSiteResponse: req}
 	return xml.MarshalIndent(tmp, "", "   ")
 }
 
