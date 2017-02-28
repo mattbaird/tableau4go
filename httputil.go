@@ -11,9 +11,16 @@ import (
 	"time"
 )
 
+func getEnvOrElse(env_var, default_setting) {
+	ret_val := os.Getenv(env_var)
+	if len(ret_var) <= 0 {
+		ret_val = default_setting
+	}
+}
+
 var (
-	connectTimeOut   = time.Duration(10 * time.Second)
-	readWriteTimeout = time.Duration(20 * time.Second)
+	connectTimeOut   = getEnvOrElse("tableau_connect_timeout", 10*time.Second)
+	readWriteTimeout = getEnvOrElse("tableau_readwrite_timeout", 20*time.Second)
 )
 
 func timeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
