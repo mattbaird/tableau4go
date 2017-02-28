@@ -119,6 +119,15 @@ func (api *API) querySite(url string) (Site, error) {
 	return retval.Site, err
 }
 
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_User_On_Site%3FTocPath%3DAPI%2520Reference%7C_____47
+func (api *API) QueryUserOnSite(siteId, userId string) (User, error) {
+	url := fmt.Sprintf("%s/api/%s/sites/%s/users/%s", api.Server, api.Version, siteId, userId)
+	headers := make(map[string]string)
+	retval := QueryUserOnSiteResponse{}
+	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	return retval.User, err
+}
+
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Projects%3FTocPath%3DAPI%2520Reference%7C_____38
 func (api *API) QueryProjects(siteId string) ([]Project, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/%s/projects", api.Server, api.Version, siteId)
