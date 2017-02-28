@@ -11,16 +11,22 @@ import (
 	"time"
 )
 
-func getEnvOrElse(env_var, default_setting) {
-	ret_val := os.Getenv(env_var)
-	if len(ret_var) <= 0 {
-		ret_val = default_setting
+func getOsEnvTimeout(env_var string, default_setting string) (retVal time.Duration) {
+	value := os.Getenv(env_var)
+	if len(value) == 0 {
+		value = default_setting
 	}
+	retVal, err := time.ParseDuration(value)
+	if err != nil {
+		fmt.Printf("Error setting key: [%s] Value: [%s] err:%v\nDefaulting to 10 seconds", value, err)
+		retVal = 10 * time.Second
+	}
+	return retVal
 }
 
 var (
-	connectTimeOut   = getEnvOrElse("tableau_connect_timeout", 10*time.Second)
-	readWriteTimeout = getEnvOrElse("tableau_readwrite_timeout", 20*time.Second)
+	connectTimeOut   = getOsEnvTimeout("tableau_connect_timeout_in_sec", "10s")
+	readWriteTimeout = getOsEnvTimeout("tableau_readwrite_timeout_in_sec", "20s")
 )
 
 func timeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
