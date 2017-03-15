@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const content_type_header = "Content-Type"
@@ -58,7 +57,7 @@ func (api *API) Signin(username, password string, contentUrl string, userIdToImp
 	headers := make(map[string]string)
 	headers[content_type_header] = application_xml_content_type
 	retval := AuthResponse{}
-	err = api.makeRequest(url, POST, []byte(payload), &retval, headers, connectTimeOut, readWriteTimeout)
+	err = api.makeRequest(url, POST, []byte(payload), &retval, headers)
 	if err == nil {
 		api.AuthToken = retval.Credentials.Token
 	}
@@ -70,7 +69,7 @@ func (api *API) Signout() error {
 	url := fmt.Sprintf("%s/api/%s/auth/signout", api.Server, api.Version)
 	headers := make(map[string]string)
 	headers[content_type_header] = application_xml_content_type
-	err := api.makeRequest(url, POST, nil, nil, headers, connectTimeOut, readWriteTimeout)
+	err := api.makeRequest(url, POST, nil, nil, headers)
 	return err
 }
 
@@ -79,7 +78,7 @@ func (api *API) QuerySites() ([]Site, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/", api.Server, api.Version)
 	headers := make(map[string]string)
 	retval := QuerySitesResponse{}
-	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	err := api.makeRequest(url, GET, nil, &retval, headers)
 	return retval.Sites.Sites, err
 }
 
@@ -115,7 +114,7 @@ func (api *API) querySiteByKey(key, value string, includeStorage bool) (Site, er
 func (api *API) querySite(url string) (Site, error) {
 	headers := make(map[string]string)
 	retval := QuerySiteResponse{}
-	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	err := api.makeRequest(url, GET, nil, &retval, headers)
 	return retval.Site, err
 }
 
@@ -124,7 +123,7 @@ func (api *API) QueryUserOnSite(siteId, userId string) (User, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/%s/users/%s", api.Server, api.Version, siteId, userId)
 	headers := make(map[string]string)
 	retval := QueryUserOnSiteResponse{}
-	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	err := api.makeRequest(url, GET, nil, &retval, headers)
 	return retval.User, err
 }
 
@@ -133,7 +132,7 @@ func (api *API) QueryProjects(siteId string) ([]Project, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/%s/projects", api.Server, api.Version, siteId)
 	headers := make(map[string]string)
 	retval := QueryProjectsResponse{}
-	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	err := api.makeRequest(url, GET, nil, &retval, headers)
 	return retval.Projects.Projects, err
 }
 
@@ -168,7 +167,7 @@ func (api *API) QueryDatasources(siteId string) ([]Datasource, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources", api.Server, api.Version, siteId)
 	headers := make(map[string]string)
 	retval := QueryDatasourcesResponse{}
-	err := api.makeRequest(url, GET, nil, &retval, headers, connectTimeOut, readWriteTimeout)
+	err := api.makeRequest(url, GET, nil, &retval, headers)
 	return retval.Datasources.Datasources, err
 }
 
@@ -192,7 +191,7 @@ func (api *API) CreateProject(siteId string, project Project) (*Project, error) 
 	headers := make(map[string]string)
 	headers[content_type_header] = application_xml_content_type
 	createProjectResponse := CreateProjectResponse{}
-	err = api.makeRequest(url, POST, xmlRep, &createProjectResponse, headers, connectTimeOut, readWriteTimeout)
+	err = api.makeRequest(url, POST, xmlRep, &createProjectResponse, headers)
 	return &createProjectResponse.Project, err
 }
 
@@ -222,7 +221,7 @@ func (api *API) publishDatasource(siteId string, tdsMetadata Datasource, datasou
 	payload += fmt.Sprintf("\r\n--%s--\r\n", api.Boundary)
 	headers := make(map[string]string)
 	headers[content_type_header] = fmt.Sprintf("multipart/mixed; boundary=%s", api.Boundary)
-	err = api.makeRequest(url, POST, []byte(payload), retval, headers, connectTimeOut, readWriteTimeout)
+	err = api.makeRequest(url, POST, []byte(payload), retval, headers)
 	return retval, err
 }
 
@@ -262,11 +261,10 @@ func (api *API) deleteSiteByKey(key string, value string) error {
 
 func (api *API) delete(url string) error {
 	headers := make(map[string]string)
-	return api.makeRequest(url, DELETE, nil, nil, headers, connectTimeOut, readWriteTimeout)
+	return api.makeRequest(url, DELETE, nil, nil, headers)
 }
 
-func (api *API) makeRequest(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string,
-	cTimeout time.Duration, rwTimeout time.Duration) error {
+func (api *API) makeRequest(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string) error {
 	var debug = false
 	if debug {
 		fmt.Printf("%s:%v\n", method, requestUrl)
@@ -274,7 +272,7 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 			fmt.Printf("%v\n", string(payload))
 		}
 	}
-	client := DefaultTimeoutClient()
+	client := NewTimeoutClient(api.ConnectTimeout, api.ReadTimeout, true)
 	var req *http.Request
 	if len(payload) > 0 {
 		var httpErr error

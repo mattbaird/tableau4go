@@ -15,6 +15,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const API_VERSION = "2.0"
@@ -29,19 +30,16 @@ type API struct {
 	AuthToken           string
 	OmitDefaultSiteName bool
 	DefaultSiteName     string
+	ConnectTimeout      time.Duration
+	ReadTimeout         time.Duration
 }
 
-func DefaultApi() API {
-	api := NewAPI(DEFAULT_SERVER, API_VERSION, BOUNDARY_STRING, "Default", true)
-	return api
-}
-
-func NewAPI(server string, version string, boundary string, defaultSiteName string, omitDefaultSiteName bool) API {
+func NewAPI(server string, version string, boundary string, defaultSiteName string, omitDefaultSiteName bool, cTimeout, rTimeout time.Duration) API {
 	fixedUpServer := server
 	if strings.HasSuffix(server, "/") {
 		fixedUpServer = server[0 : len(server)-1]
 	}
-	return API{Server: fixedUpServer, Version: version, Boundary: boundary, DefaultSiteName: defaultSiteName, OmitDefaultSiteName: omitDefaultSiteName}
+	return API{Server: fixedUpServer, Version: version, Boundary: boundary, DefaultSiteName: defaultSiteName, OmitDefaultSiteName: omitDefaultSiteName, ConnectTimeout: cTimeout, ReadTimeout: rTimeout}
 }
 
 type Project struct {
