@@ -14,7 +14,6 @@ package tableau4go
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -30,7 +29,6 @@ const POST = "POST"
 const GET = "GET"
 const DELETE = "DELETE"
 
-var ErrDoesNotExist = errors.New("Does Not Exist")
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Sign_In%3FTocPath%3DAPI%2520Reference%7C_____51
 func (api *API) Signin(username, password string, contentUrl string, userIdToImpersonate string) error {
@@ -162,13 +160,67 @@ func (api *API) GetProjectByID(siteId, ID string) (Project, error) {
 	return Project{}, fmt.Errorf("Project with ID '%s' Not Found", ID)
 }
 
+//TODO: (jbarefoot) Filter by project name here:
+
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Datasources%3FTocPath%3DAPI%2520Reference%7C_____33
 func (api *API) QueryDatasources(siteId string) ([]Datasource, error) {
-	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources", api.Server, api.Version, siteId)
+
+	// jbarefoot: We don't do any paging here, but setting the pageSize to the max of 1000 + filter by name should work
+
+	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources?pageSize=1000", api.Server, api.Version, siteId)
 	headers := make(map[string]string)
 	retval := QueryDatasourcesResponse{}
 	err := api.makeRequest(url, GET, nil, &retval, headers)
+	if api.Debug {
+		fmt.Printf("Found %d datasources for siteId %s \n", len(retval.Datasources.Datasources), siteId)
+	}
 	return retval.Datasources.Datasources, err
+}
+
+
+func (api *API) getDatasourceRawXML(siteId, datasourceId string) (string, error) {
+	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources/%s", api.Server, api.Version, siteId, datasourceId)
+	headers := make(map[string]string)
+	//err, body := api.makeRequestGetBody(url, GET, nil, nil, headers)
+
+	result := QueryDatasourceResponseRawXML{}
+	err := api.makeRequest(url, GET, nil, &result, headers)
+	return result.Datasource, err
+}
+
+// assumption is that the intersection of site, project, and datasource name is unique
+func (api *API) GetDatasourceRawXML(siteId, tableauProjectId, datasourceName string) (string, error) {
+	if api.Debug {
+		fmt.Printf("\n Getting data source raw xml for siteId %s, tableauProjectId %s, and datasourceName %s \n", siteId, tableauProjectId, datasourceName)
+	}
+
+	var datasource *Datasource
+	datasources, err := api.QueryDatasources(siteId)
+	for _, d := range datasources {
+		if d.Project.ID == tableauProjectId && d.Name == datasourceName {
+			datasource = &d
+			break;
+		}
+	}
+
+	if datasource == nil {
+		if api.Debug {
+			fmt.Printf("Could not find datasource for siteId %s, tableauProjectId %s, and datasourceName %s \n", siteId, tableauProjectId, datasourceName)
+		}
+		return "", nil
+	}
+
+	datasourceXML, err := api.getDatasourceRawXML(siteId, datasource.ID)
+
+	if err != nil {
+		return "", err
+	}
+
+	if api.Debug {
+		fmt.Printf("Got raw xml for datasource with id %s, raw xml is: \n %s \n", datasource.ID, datasourceXML)
+	}
+
+	return datasourceXML, nil
 }
 
 func (api *API) GetSiteID(siteName string) (string, error) {
@@ -265,8 +317,7 @@ func (api *API) delete(url string) error {
 }
 
 func (api *API) makeRequest(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string) error {
-	var debug = false
-	if debug {
+	if api.Debug {
 		fmt.Printf("%s:%v\n", method, requestUrl)
 		if payload != nil {
 			fmt.Printf("%v\n", string(payload))
@@ -294,7 +345,7 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 		}
 	}
 	if len(api.AuthToken) > 0 {
-		if debug {
+		if api.Debug {
 			fmt.Printf("%s:%s\n", auth_header, api.AuthToken)
 		}
 		req.Header.Add(auth_header, api.AuthToken)
@@ -306,14 +357,14 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 	}
 	defer resp.Body.Close()
 	body, readBodyError := ioutil.ReadAll(resp.Body)
-	if debug {
+	if api.Debug {
 		fmt.Printf("t4g Response:%v\n", string(body))
 	}
 	if readBodyError != nil {
 		return readBodyError
 	}
 	if resp.StatusCode == 404 {
-		return ErrDoesNotExist
+		return &StatusError{Code: 404, Msg: "Resource not found", URL: requestUrl}
 	}
 	if resp.StatusCode >= 300 {
 		tErrorResponse := ErrorResponse{}

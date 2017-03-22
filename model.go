@@ -32,6 +32,7 @@ type API struct {
 	DefaultSiteName     string
 	ConnectTimeout      time.Duration
 	ReadTimeout         time.Duration
+	Debug               bool
 }
 
 func NewAPI(server string, version string, boundary string, defaultSiteName string, omitDefaultSiteName bool, cTimeout, rTimeout time.Duration) API {
@@ -103,6 +104,10 @@ type Datasources struct {
 
 type QueryDatasourcesResponse struct {
 	Datasources Datasources `json:"datasources,omitempty" xml:"datasources,omitempty"`
+}
+
+type QueryDatasourceResponseRawXML struct {
+	Datasource string `xml:",innerxml"`
 }
 
 func (ds *Datasource) XML() ([]byte, error) {
@@ -223,4 +228,14 @@ type Terror struct {
 
 func (t Terror) Error() string {
 	return fmt.Sprintf("Code:%s, Summary:%s, Detail:%s", t.Code, t.Summary, t.Detail)
+}
+
+type StatusError struct {
+	Code int
+	Msg  string
+	URL  string
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("%d - %s.  Request URL was: %s", e.Code, e.Msg, e.URL)
 }
