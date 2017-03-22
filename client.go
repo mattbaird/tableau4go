@@ -177,19 +177,16 @@ func (api *API) QueryDatasources(siteId string) ([]Datasource, error) {
 	return retval.Datasources.Datasources, err
 }
 
-
-func (api *API) getDatasourceRawXML(siteId, datasourceId string) (string, error) {
-	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources/%s", api.Server, api.Version, siteId, datasourceId)
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Download_Datasource%3FTocPath%3DAPI%2520Reference%7C_____34
+//note that even though this is under the /datasources path, the docs list it under "Download Datasource" and not e.g. "Query Datasource Content"
+func (api *API) getDatasourceContentXML(siteId, datasourceId string) (string, error) {
+	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources/%s/content?includeExtract=false", api.Server, api.Version, siteId, datasourceId)
 	headers := make(map[string]string)
-	//err, body := api.makeRequestGetBody(url, GET, nil, nil, headers)
-
-	result := QueryDatasourceResponseRawXML{}
-	err := api.makeRequest(url, GET, nil, &result, headers)
-	return result.Datasource, err
+	return api.makeRequestGetBody(url, GET, nil, nil, headers)
 }
 
 // assumption is that the intersection of site, project, and datasource name is unique
-func (api *API) GetDatasourceRawXML(siteId, tableauProjectId, datasourceName string) (string, error) {
+func (api *API) GetDatasourceContentXML(siteId, tableauProjectId, datasourceName string) (string, error) {
 	if api.Debug {
 		fmt.Printf("\n Getting data source raw xml for siteId %s, tableauProjectId %s, and datasourceName %s \n", siteId, tableauProjectId, datasourceName)
 	}
@@ -210,7 +207,7 @@ func (api *API) GetDatasourceRawXML(siteId, tableauProjectId, datasourceName str
 		return "", nil
 	}
 
-	datasourceXML, err := api.getDatasourceRawXML(siteId, datasource.ID)
+	datasourceXML, err := api.getDatasourceContentXML(siteId, datasource.ID)
 
 	if err != nil {
 		return "", err
@@ -317,6 +314,12 @@ func (api *API) delete(url string) error {
 }
 
 func (api *API) makeRequest(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string) error {
+	_, err := api.makeRequestGetBody(requestUrl, method, payload, result, headers)
+	return err
+}
+
+
+func (api *API) makeRequestGetBody(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string) (string, error) {
 	if api.Debug {
 		fmt.Printf("%s:%v\n", method, requestUrl)
 		if payload != nil {
@@ -329,14 +332,14 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 		var httpErr error
 		req, httpErr = http.NewRequest(strings.TrimSpace(method), strings.TrimSpace(requestUrl), bytes.NewBuffer(payload))
 		if httpErr != nil {
-			return httpErr
+			return "", httpErr
 		}
 		req.Header.Add(content_length_header, strconv.Itoa(len(payload)))
 	} else {
 		var httpErr error
 		req, httpErr = http.NewRequest(strings.TrimSpace(method), strings.TrimSpace(requestUrl), nil)
 		if httpErr != nil {
-			return httpErr
+			return "", httpErr
 		}
 	}
 	if headers != nil {
@@ -353,7 +356,7 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 	var httpErr error
 	resp, httpErr := client.Do(req)
 	if httpErr != nil {
-		return httpErr
+		return "", httpErr
 	}
 	defer resp.Body.Close()
 	body, readBodyError := ioutil.ReadAll(resp.Body)
@@ -361,25 +364,25 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 		fmt.Printf("t4g Response:%v\n", string(body))
 	}
 	if readBodyError != nil {
-		return readBodyError
+		return "", readBodyError
 	}
 	if resp.StatusCode == 404 {
-		return &StatusError{Code: 404, Msg: "Resource not found", URL: requestUrl}
+		return "", &StatusError{Code: 404, Msg: "Resource not found", URL: requestUrl}
 	}
 	if resp.StatusCode >= 300 {
 		tErrorResponse := ErrorResponse{}
 		err := xml.Unmarshal(body, &tErrorResponse)
 		if err != nil {
-			return err
+			return string(body), err
 		}
-		return tErrorResponse.Error
+		return string(body), tErrorResponse.Error
 	}
 	if result != nil {
 		// else unmarshall to the result type specified by caller
 		err := xml.Unmarshal(body, &result)
 		if err != nil {
-			return err
+			return string(body), err
 		}
 	}
-	return nil
+	return string(body), nil
 }
