@@ -19,6 +19,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"errors"
+	"archive/zip"
+	"io"
 )
 
 const content_type_header = "Content-Type"
@@ -160,14 +163,18 @@ func (api *API) GetProjectByID(siteId, ID string) (Project, error) {
 	return Project{}, fmt.Errorf("Project with ID '%s' Not Found", ID)
 }
 
-//TODO: (jbarefoot) Filter by project name here:
-
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Datasources%3FTocPath%3DAPI%2520Reference%7C_____33
-func (api *API) QueryDatasources(siteId string) ([]Datasource, error) {
+func (api *API) QueryDatasources(siteId string, datasourceName string) ([]Datasource, error) {
 
 	// jbarefoot: We don't do any paging here, but setting the pageSize to the max of 1000 + filter by name should work
 
-	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources?pageSize=1000", api.Server, api.Version, siteId)
+	var url string
+	if(datasourceName != ""){
+		url = fmt.Sprintf("%s/api/%s/sites/%s/datasources?pageSize=1000&filter=name:eq:%s", api.Server, api.Version, siteId, datasourceName)
+	} else{
+		url = fmt.Sprintf("%s/api/%s/sites/%s/datasources?pageSize=1000", api.Server, api.Version, siteId)
+	}
+
 	headers := make(map[string]string)
 	retval := QueryDatasourcesResponse{}
 	err := api.makeRequest(url, GET, nil, &retval, headers)
@@ -179,10 +186,20 @@ func (api *API) QueryDatasources(siteId string) ([]Datasource, error) {
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Download_Datasource%3FTocPath%3DAPI%2520Reference%7C_____34
 //note that even though this is under the /datasources path, the docs list it under "Download Datasource" and not e.g. "Query Datasource Content"
-func (api *API) getDatasourceContentXML(siteId, datasourceId string) (string, error) {
+func (api *API) getDatasourceContent(siteId, datasourceId string) (string, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/%s/datasources/%s/content?includeExtract=false", api.Server, api.Version, siteId, datasourceId)
 	headers := make(map[string]string)
-	return api.makeRequestGetBody(url, GET, nil, nil, headers)
+	body, err := api.makeRequestGetBody(url, GET, nil, nil, headers)
+
+	xml, err := extractXmlFromZip(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		if api.Debug {
+			fmt.Printf("For datasource with id %s: Got an error treating datasource like a zip (.tdsx), assuming it's plain xml (.tds) instead. \n", datasourceId)
+		}
+		xml = string(body)
+	}
+
+	return xml, nil
 }
 
 // assumption is that the intersection of site, project, and datasource name is unique
@@ -192,7 +209,7 @@ func (api *API) GetDatasourceContentXML(siteId, tableauProjectId, datasourceName
 	}
 
 	var datasource *Datasource
-	datasources, err := api.QueryDatasources(siteId)
+	datasources, err := api.QueryDatasources(siteId, datasourceName)
 	for _, d := range datasources {
 		if d.Project.ID == tableauProjectId && d.Name == datasourceName {
 			datasource = &d
@@ -207,7 +224,7 @@ func (api *API) GetDatasourceContentXML(siteId, tableauProjectId, datasourceName
 		return "", nil
 	}
 
-	datasourceXML, err := api.getDatasourceContentXML(siteId, datasource.ID)
+	datasourceXML, err := api.getDatasourceContent(siteId, datasource.ID)
 
 	if err != nil {
 		return "", err
@@ -218,6 +235,36 @@ func (api *API) GetDatasourceContentXML(siteId, tableauProjectId, datasourceName
 	}
 
 	return datasourceXML, nil
+}
+
+// A .tdsx is really just a zip file containing the .tds XML
+func extractXmlFromZip(in io.ReaderAt, size int64) (xml string, err error){
+	r, err := zip.NewReader(in, size)
+
+	if err != nil {
+		return xml, err
+	}
+
+	var datasourceFile *zip.File
+	if len(r.File) != 1 {
+		return xml, errors.New("A .tdsx file is expect to be a zip file containing exactly one file, the .tds datasource")
+	}
+	for _, f := range r.File {
+		datasourceFile = f
+		break
+	}
+
+	readerCloser, err := datasourceFile.Open()
+	if err != nil {
+		return xml, err
+	}
+	defer readerCloser.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(readerCloser)
+	xml = string(buf.Bytes())
+
+	return xml, err
 }
 
 func (api *API) GetSiteID(siteName string) (string, error) {
@@ -318,8 +365,7 @@ func (api *API) makeRequest(requestUrl string, method string, payload []byte, re
 	return err
 }
 
-
-func (api *API) makeRequestGetBody(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string) (string, error) {
+func (api *API) makeRequestGetBody(requestUrl string, method string, payload []byte, result interface{}, headers map[string]string) ([]byte, error) {
 	if api.Debug {
 		fmt.Printf("%s:%v\n", method, requestUrl)
 		if payload != nil {
@@ -332,14 +378,14 @@ func (api *API) makeRequestGetBody(requestUrl string, method string, payload []b
 		var httpErr error
 		req, httpErr = http.NewRequest(strings.TrimSpace(method), strings.TrimSpace(requestUrl), bytes.NewBuffer(payload))
 		if httpErr != nil {
-			return "", httpErr
+			return nil, httpErr
 		}
 		req.Header.Add(content_length_header, strconv.Itoa(len(payload)))
 	} else {
 		var httpErr error
 		req, httpErr = http.NewRequest(strings.TrimSpace(method), strings.TrimSpace(requestUrl), nil)
 		if httpErr != nil {
-			return "", httpErr
+			return nil, httpErr
 		}
 	}
 	if headers != nil {
@@ -356,33 +402,33 @@ func (api *API) makeRequestGetBody(requestUrl string, method string, payload []b
 	var httpErr error
 	resp, httpErr := client.Do(req)
 	if httpErr != nil {
-		return "", httpErr
+		return nil, httpErr
 	}
 	defer resp.Body.Close()
 	body, readBodyError := ioutil.ReadAll(resp.Body)
 	if api.Debug {
-		fmt.Printf("t4g Response:%v\n", string(body))
+		fmt.Printf("t4g Response:%v\n", body)
 	}
 	if readBodyError != nil {
-		return "", readBodyError
+		return nil, readBodyError
 	}
 	if resp.StatusCode == 404 {
-		return "", &StatusError{Code: 404, Msg: "Resource not found", URL: requestUrl}
+		return nil, &StatusError{Code: 404, Msg: "Resource not found", URL: requestUrl}
 	}
 	if resp.StatusCode >= 300 {
 		tErrorResponse := ErrorResponse{}
 		err := xml.Unmarshal(body, &tErrorResponse)
 		if err != nil {
-			return string(body), err
+			return body, err
 		}
-		return string(body), tErrorResponse.Error
+		return body, tErrorResponse.Error
 	}
 	if result != nil {
 		// else unmarshall to the result type specified by caller
 		err := xml.Unmarshal(body, &result)
 		if err != nil {
-			return string(body), err
+			return body, err
 		}
 	}
-	return string(body), nil
+	return body, nil
 }

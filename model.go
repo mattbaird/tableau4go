@@ -49,6 +49,14 @@ type Project struct {
 	Description string `json:"description,omitempty" xml:"description,attr,omitempty"`
 }
 
+// for sorting by tableau project name
+type ProjectByName []Project
+
+func (a ProjectByName) Len() int           { return len(a) }
+func (a ProjectByName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ProjectByName) Less(i, j int) bool { return a[i].Name < a[j].Name}
+
+
 type Projects struct {
 	Projects []Project `json:"project,omitempty" xml:"project,omitempty"`
 }
