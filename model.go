@@ -54,8 +54,7 @@ type ProjectByName []Project
 
 func (a ProjectByName) Len() int           { return len(a) }
 func (a ProjectByName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ProjectByName) Less(i, j int) bool { return a[i].Name < a[j].Name}
-
+func (a ProjectByName) Less(i, j int) bool { return a[i].Name < a[j].Name }
 
 type Projects struct {
 	Projects []Project `json:"project,omitempty" xml:"project,omitempty"`
@@ -151,8 +150,8 @@ type Credentials struct {
 }
 
 type User struct {
-	ID string `json:"id,omitempty" xml:"id,attr,omitempty"`
-	Name string `json:"name,omitempty" xml:"name,attr,omitempty"`
+	ID       string `json:"id,omitempty" xml:"id,attr,omitempty"`
+	Name     string `json:"name,omitempty" xml:"name,attr,omitempty"`
 	SiteRole string `json:"siteRole,omitempty" xml:"siteRole,attr,omitempty"`
 	FullName string `json:"fullName,omitempty" xml:"fullName,attr,omitempty"`
 }

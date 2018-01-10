@@ -12,16 +12,16 @@
 package tableau4go
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
-	"errors"
-	"archive/zip"
-	"io"
 )
 
 const content_type_header = "Content-Type"
@@ -31,7 +31,6 @@ const application_xml_content_type = "application/xml"
 const POST = "POST"
 const GET = "GET"
 const DELETE = "DELETE"
-
 
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Sign_In%3FTocPath%3DAPI%2520Reference%7C_____51
 func (api *API) Signin(username, password string, contentUrl string, userIdToImpersonate string) error {
@@ -169,9 +168,9 @@ func (api *API) QueryDatasources(siteId string, datasourceName string) ([]Dataso
 	// jbarefoot: We don't do any paging here, but setting the pageSize to the max of 1000 + filter by name should work
 
 	var url string
-	if(datasourceName != ""){
+	if datasourceName != "" {
 		url = fmt.Sprintf("%s/api/%s/sites/%s/datasources?pageSize=1000&filter=name:eq:%s", api.Server, api.Version, siteId, datasourceName)
-	} else{
+	} else {
 		url = fmt.Sprintf("%s/api/%s/sites/%s/datasources?pageSize=1000", api.Server, api.Version, siteId)
 	}
 
@@ -213,7 +212,7 @@ func (api *API) GetDatasourceContentXML(siteId, tableauProjectId, datasourceName
 	for _, d := range datasources {
 		if d.Project.ID == tableauProjectId && d.Name == datasourceName {
 			datasource = &d
-			break;
+			break
 		}
 	}
 
@@ -238,7 +237,7 @@ func (api *API) GetDatasourceContentXML(siteId, tableauProjectId, datasourceName
 }
 
 // A .tdsx is really just a zip file containing the .tds XML
-func extractXmlFromZip(in io.ReaderAt, size int64) (xml string, err error){
+func extractXmlFromZip(in io.ReaderAt, size int64) (xml string, err error) {
 	r, err := zip.NewReader(in, size)
 
 	if err != nil {
