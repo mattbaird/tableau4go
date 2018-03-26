@@ -137,6 +137,15 @@ type AuthResponse struct {
 	Credentials *Credentials `json:"credentials,omitempty" xml:"credentials,omitempty"`
 }
 
+type ServerInfoResponse struct {
+	ServerInfo ServerInfo `json:"serverInfo,omitempty" xml:"serverInfo,omitempty"`
+}
+
+type ServerInfo struct {
+	ProductVersion string `json:"productVersion,omitempty" xml:"productVersion,omitempty"`
+	RestApiVersion string `json:"restApiVersion,omitempty" xml:"restApiVersion,omitempty"`
+}
+
 type QueryProjectsResponse struct {
 	Projects Projects `json:"projects,omitempty" xml:"projects,omitempty"`
 }

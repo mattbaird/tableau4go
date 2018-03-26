@@ -73,6 +73,16 @@ func (api *API) Signout() error {
 	return err
 }
 
+//http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Server_Info%3FTocPath%3DAPI%2520Reference%7C__
+func (api *API) ServerInfo() (ServerInfo, error) {
+	// this call only works on apiVersion 2.4 and up
+	url := fmt.Sprintf("%s/api/%s/serverinfo", api.Server, "2.4")
+	headers := make(map[string]string)
+	retval := ServerInfoResponse{}
+	err := api.makeRequest(url, GET, nil, &retval, headers)
+	return retval.ServerInfo, err
+}
+
 //http://onlinehelp.tableau.com/current/api/rest_api/en-us/help.htm#REST/rest_api_ref.htm#Query_Sites%3FTocPath%3DAPI%2520Reference%7C_____40
 func (api *API) QuerySites() ([]Site, error) {
 	url := fmt.Sprintf("%s/api/%s/sites/", api.Server, api.Version)
